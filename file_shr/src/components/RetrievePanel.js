@@ -102,7 +102,10 @@ function RetrievePanel() {
       {/* ── Code Input ── */}
       <div className="code-search-box">
         <div className="code-input-wrapper">
-          <span className="code-prefix">🔑<b><i>FYL - </i></b></span>
+          <span className="code-prefix">
+            <span className="code-key-icon">🔑</span>
+            <span className="code-tag">FYL -</span>
+          </span>
           <input
             className="code-input"
             type="text"
@@ -121,7 +124,7 @@ function RetrievePanel() {
           {status === 'loading' ? <span className="btn-spinner" /> : '⬇ Retrieve File'}
         </button>
       </div>
-      <p>💡 Enter the 6-character alphanumeric code. Example:<strong>FYL-A2345F</strong></p>
+      <p className="code-hint">💡 Enter the 6-character alphanumeric code. Example: <strong>FYL-A2345F</strong></p>
 
       {/* ── Demo: supported file types (shown only before any search) ── */}
       <div className="demo-section">

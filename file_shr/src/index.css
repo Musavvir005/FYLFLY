@@ -1,7 +1,8 @@
 body {
   margin: 0;
   padding: 0;
-  background: #ede8de;
+  background: var(--bg-page, #ede8de);
+  color: var(--text-1, #2e2719);
 }
 
 code {

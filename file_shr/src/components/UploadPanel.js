@@ -117,7 +117,7 @@ function UploadPanel() {
               </div>
               <p className="drop-text">Drop your file here</p>
               <p className="drop-hint">or <span className="link-text">click to browse</span></p>
-              <p className="drop-formats" style={{ color: "#fe3838ff" }}>Any format • Max 100 MB</p>
+              <p className="drop-formats">Any format • Max 100 MB</p>
             </div>
           ) : (
             <div className="file-preview">

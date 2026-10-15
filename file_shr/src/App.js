@@ -99,7 +99,7 @@ function App() {
                 </span>
               </span>
               <span className="theme-toggle-emoji" aria-hidden="true">
-                {theme === 'light' ? '🌙' : '☀️'}
+                {theme === 'light' ? '☀️' : '🌙'}
               </span>
             </button>
           </div>

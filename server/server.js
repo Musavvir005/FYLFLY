@@ -14,17 +14,19 @@ const app = express();
 // ── Middleware ──────────────────────────────────────────────────────────────
 
 const allowedOrigins = [
-  process.env.FRONTEND_URL
+  process.env.FRONTEND_URL && process.env.FRONTEND_URL.replace(/\/+$/, '')
 ].filter(Boolean);
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin, localhost, configured FRONTEND_URL, or any Vercel domain
+    // Allow requests with no origin, localhost, private network IPs, configured FRONTEND_URL, or any Vercel domain
+    const cleanOrigin = origin ? origin.replace(/\/+$/, '') : '';
     if (
       !origin ||
       /^http:\/\/localhost(:\d+)?$/.test(origin) ||
-      allowedOrigins.includes(origin) ||
-      /\.vercel\.app$/.test(origin)
+      /^http:\/\/(192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?$/.test(origin) ||
+      allowedOrigins.includes(cleanOrigin) ||
+      /\.vercel\.app$/.test(cleanOrigin)
     ) {
       callback(null, true);
     } else {

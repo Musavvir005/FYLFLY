@@ -4,31 +4,19 @@ const File = require("../models/File");
 
 // ── Helper ───────────────────────────────────────────────
 
-// Generate a random 6-character code (4 unique digits + 2 letters, shuffled)
+// Generate a 6-character code following pattern: 2 numbers + 1 small letter + 2 numbers + 1 small letter (e.g. 12a34b)
 const generateCode = () => {
   const digits = "0123456789";
-  const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+  const letters = "abcdefghijklmnopqrstuvwxyz";
 
-  const result = [];
+  const d1 = digits[Math.floor(Math.random() * digits.length)];
+  const d2 = digits[Math.floor(Math.random() * digits.length)];
+  const l1 = letters[Math.floor(Math.random() * letters.length)];
+  const d3 = digits[Math.floor(Math.random() * digits.length)];
+  const d4 = digits[Math.floor(Math.random() * digits.length)];
+  const l2 = letters[Math.floor(Math.random() * letters.length)];
 
-  // 4 unique digits
-  const usedDigits = new Set();
-  while (usedDigits.size < 4) {
-    usedDigits.add(digits[Math.floor(Math.random() * digits.length)]);
-  }
-  result.push(...usedDigits);
-
-  // 2 letters
-  for (let i = 0; i < 2; i++)
-    result.push(letters[Math.floor(Math.random() * letters.length)]);
-
-  // Fisher-Yates shuffle
-  for (let i = result.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [result[i], result[j]] = [result[j], result[i]];
-  }
-
-  return result.join("");
+  return `${d1}${d2}${l1}${d3}${d4}${l2}`;
 };
 
 // ── Controllers ─────────────────────────────────────────

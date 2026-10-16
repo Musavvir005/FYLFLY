@@ -109,7 +109,7 @@ function RetrievePanel() {
           <input
             className="code-input"
             type="text"
-            placeholder="12S45W"
+            placeholder="12F4L"
             value={code}
             autoCapitalize="none"
             autoCorrect="off"
@@ -117,14 +117,14 @@ function RetrievePanel() {
             onChange={(e) => {
               const raw = e.target.value;
               const stripped = raw.replace(/^FYL[-_\s]*/i, '');
-              const cleaned = stripped.replace(/[^A-Za-z0-9]/g, '').slice(0, 6);
+              const cleaned = stripped.replace(/[^A-Za-z0-9]/g, '').slice(0, 6).toLowerCase();
               setCode(cleaned);
             }}
             onPaste={(e) => {
               e.preventDefault();
               const pasted = e.clipboardData.getData('text');
               const stripped = pasted.replace(/^FYL[-_\s]*/i, '');
-              const cleaned = stripped.replace(/[^A-Za-z0-9]/g, '').slice(0, 6);
+              const cleaned = stripped.replace(/[^A-Za-z0-9]/g, '').slice(0, 6).toLowerCase();
               setCode(cleaned);
             }}
             onKeyDown={(e) => e.key === 'Enter' && handleRetrieve()}
@@ -139,7 +139,7 @@ function RetrievePanel() {
           {status === 'loading' ? <span className="btn-spinner" /> : '⬇ Retrieve File'}
         </button>
       </div>
-      <p className="code-hint">💡 Enter the 6-character alphanumeric code. Example: <strong>FYL-A2345F</strong></p>
+      <p className="code-hint">💡 Enter the 6-character access code. Example: <strong>FYL-12a34b</strong></p>
 
       {/* ── Demo: supported file types (shown only before any search) ── */}
       <div className="demo-section">

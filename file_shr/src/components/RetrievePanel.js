@@ -1,9 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { API_BASE_URL } from '../api';
 
 function RetrievePanel() {
-  const [code, setCode] = useState('');
+  const [code, setCode] = useState(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const urlCode = params.get('code') || '';
+      return urlCode.replace(/^FYL[-_\s]*/i, '').replace(/[^A-Za-z0-9]/g, '').slice(0, 6).toLowerCase();
+    } catch {
+      return '';
+    }
+  });
   const [status, setStatus] = useState(null);
   const [foundFile, setFoundFile] = useState(null);
   const [downloading, setDownloading] = useState(false);
@@ -20,15 +28,16 @@ function RetrievePanel() {
     return '📄';
   };
 
-  const handleRetrieve = async () => {
-    if (!code.trim()) return;
+  const handleRetrieve = async (codeOverride) => {
+    const targetCode = (typeof codeOverride === 'string' ? codeOverride : code).trim();
+    if (!targetCode) return;
 
     setStatus('loading');
     setFoundFile(null);
 
     try {
       const response = await axios.post(`${API_BASE_URL}/api/retrieve`, {
-        code: code.trim()
+        code: targetCode
       });
 
       setFoundFile(response.data);
@@ -41,6 +50,34 @@ function RetrievePanel() {
       else setStatus('error');
     }
   };
+
+  // Auto-fetch file details if code exists in URL
+  useEffect(() => {
+    const checkUrlCode = () => {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const urlCode = (params.get('code') || '')
+          .replace(/^FYL[-_\s]*/i, '')
+          .replace(/[^A-Za-z0-9]/g, '')
+          .slice(0, 6)
+          .toLowerCase();
+
+        if (urlCode && urlCode.length === 6) {
+          setCode(urlCode);
+          handleRetrieve(urlCode);
+        }
+      } catch (e) {}
+    };
+
+    checkUrlCode();
+    window.addEventListener('popstate', checkUrlCode);
+    window.addEventListener('hashchange', checkUrlCode);
+    return () => {
+      window.removeEventListener('popstate', checkUrlCode);
+      window.removeEventListener('hashchange', checkUrlCode);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const getFileCategory = (name) => {
     if (!name) return 'other';
@@ -96,7 +133,7 @@ function RetrievePanel() {
     <div className="panel retrieve-panel">
       <div className="panel-header">
         <h2 className="panel-title">Retrieve a File</h2>
-        <p className="panel-subtitle">Enter the access code.</p>
+        <p className="panel-subtitle">Enter the OTP.</p>
       </div>
 
       {/* ── Code Input ── */}
@@ -109,7 +146,7 @@ function RetrievePanel() {
           <input
             className="code-input"
             type="text"
-            placeholder="12F4L"
+            placeholder="12f34l"
             value={code}
             autoCapitalize="none"
             autoCorrect="off"
@@ -139,7 +176,7 @@ function RetrievePanel() {
           {status === 'loading' ? <span className="btn-spinner" /> : '⬇ Retrieve File'}
         </button>
       </div>
-      <p className="code-hint">💡 Enter the 6-character access code. Example: <strong>FYL-12a34b</strong></p>
+      <p className="code-hint">💡 Enter the 6-character OTP. Example: <strong>FYL-12a34b</strong></p>
 
       {/* ── Demo: supported file types (shown only before any search) ── */}
       <div className="demo-section">
@@ -192,7 +229,7 @@ function RetrievePanel() {
           <div className="result-icon">⌛</div>
           <div>
             <p className="result-title">File Expired</p>
-            <p className="result-sub">This file is no longer available — it was deleted after 3 hours.</p>
+            <p className="result-sub">This file is no longer available — it was deleted after 24 hours.</p>
           </div>
         </div>
       )}

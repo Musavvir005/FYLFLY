@@ -14,9 +14,9 @@ function ExpiryToast({ expiryTime, sentToEmail, onDismiss }) {
   const startTime = useRef(Date.now());
   const rafRef = useRef(null);
 
-  // Format ISO → "HH:MM AM/PM"
+  // Format ISO → "MMM D, HH:MM AM/PM"
   const availableTill = expiryTime
-    ? new Date(expiryTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    ? new Date(expiryTime).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
     : '';
 
   // Keep onDismiss in a ref so we can call it without it being a dep of the effect
@@ -58,6 +58,9 @@ function ExpiryToast({ expiryTime, sentToEmail, onDismiss }) {
           <p className="et-sub">
             {sentToEmail ? <>Emailed to <strong>{sentToEmail}</strong> • </> : null}
             Valid till <strong className="et-time">{availableTill}</strong>
+            <span style={{ display: 'block', fontSize: '11px', opacity: 0.85, marginTop: '2px' }}>
+              💡 If not received in inbox, please check your spam box
+            </span>
           </p>
         </div>
         <button className="et-close" onClick={() => { setFading(true); setTimeout(() => onDismiss?.(), 400); }} aria-label="Dismiss">

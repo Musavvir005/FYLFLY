@@ -20,12 +20,28 @@ function UploadPanel() {
     e.preventDefault();
     setDragging(false);
     const file = e.dataTransfer.files[0];
-    if (file) setSelectedFile(file);
+    if (file) {
+      if (file.size > 200 * 1024 * 1024) {
+        alert('File size exceeds the 200 MB limit.');
+        return;
+      }
+      setSelectedFile(file);
+    }
   };
 
   const handleDragOver = (e) => { e.preventDefault(); setDragging(true); };
   const handleDragLeave = () => setDragging(false);
-  const handleFileInput = (e) => { if (e.target.files[0]) setSelectedFile(e.target.files[0]); };
+  const handleFileInput = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 200 * 1024 * 1024) {
+        alert('File size exceeds the 200 MB limit.');
+        e.target.value = '';
+        return;
+      }
+      setSelectedFile(file);
+    }
+  };
 
   const formatSize = (bytes) => {
     if (bytes < 1024) return `${bytes} B`;
@@ -97,7 +113,7 @@ function UploadPanel() {
     <div className="panel upload-panel">
       <div className="panel-header">
         <h2 className="panel-title">Send a File</h2>
-        <p className="panel-subtitle">Upload a file and enter a valid email — get an access code.</p>
+        <p className="panel-subtitle">Upload a file and enter a valid email — get an OTP.</p>
       </div>
 
       {/* ── Upload Form ── */}
@@ -117,7 +133,7 @@ function UploadPanel() {
               </div>
               <p className="drop-text">Drop your file here</p>
               <p className="drop-hint">or <span className="link-text">click to browse</span></p>
-              <p className="drop-formats">Any format • Max 100 MB</p>
+              <p className="drop-formats">Any format • Max 200 MB</p>
             </div>
           ) : (
             <div className="file-preview">

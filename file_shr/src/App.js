@@ -5,15 +5,57 @@ import RetrievePanel from './components/RetrievePanel';
 import AboutPanel from './components/AboutPanel';
 
 function App() {
-  const [activePanel, setActivePanel] = useState('upload');
+  const [activePanel, setActivePanel] = useState(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get('tab');
+      if (tab === 'retrieve' || tab === 'about' || tab === 'upload') return tab;
+      if (params.get('code')) return 'retrieve';
+      if (window.location.hash === '#retrieve') return 'retrieve';
+    } catch (e) {}
+    return 'upload';
+  });
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem('fyl_theme') || 'light';
   });
+
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('fyl_theme', theme);
   }, [theme]);
+
+  // Close mobile drawer on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') setMobileMenuOpen(false);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // Listen for browser navigation / URL updates
+  useEffect(() => {
+    const handleUrlChange = () => {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const tab = params.get('tab');
+        if (tab === 'retrieve' || tab === 'about' || tab === 'upload') {
+          setActivePanel(tab);
+        } else if (params.get('code') || window.location.hash.startsWith('#retrieve')) {
+          setActivePanel('retrieve');
+        }
+      } catch (e) {}
+    };
+
+    window.addEventListener('popstate', handleUrlChange);
+    window.addEventListener('hashchange', handleUrlChange);
+    return () => {
+      window.removeEventListener('popstate', handleUrlChange);
+      window.removeEventListener('hashchange', handleUrlChange);
+    };
+  }, []);
 
   const toggleTheme = () => {
     setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
@@ -25,13 +67,36 @@ function App() {
     { id: 'about', label: 'About Me', icon: '👤' },
   ];
 
+  const handleNavClick = (id) => {
+    setActivePanel(id);
+    setMobileMenuOpen(false);
+  };
+
   return (
-    <div className="app-wrapper" data-theme={theme}>
-      {/* Sidebar */}
-      <aside className="sidebar">
+    <div className={`app-wrapper ${mobileMenuOpen ? 'drawer-is-open' : ''}`} data-theme={theme}>
+      {/* Mobile Backdrop Overlay */}
+      {mobileMenuOpen && (
+        <div
+          className="drawer-overlay"
+          onClick={() => setMobileMenuOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Sidebar / Slide-Out Drawer on Mobile */}
+      <aside className={`sidebar ${mobileMenuOpen ? 'mobile-open' : ''}`}>
         <div className="brand">
           <div className="brand-icon">FYL</div>
           <span className="brand-name">FLY</span>
+          {/* Close button in mobile drawer */}
+          <button
+            type="button"
+            className="drawer-close-btn"
+            onClick={() => setMobileMenuOpen(false)}
+            aria-label="Close menu"
+          >
+            ✕
+          </button>
         </div>
 
         <nav className="nav-list">
@@ -39,7 +104,7 @@ function App() {
             <button
               key={item.id}
               className={`nav-item ${activePanel === item.id ? 'active' : ''}`}
-              onClick={() => setActivePanel(item.id)}
+              onClick={() => handleNavClick(item.id)}
             >
               <span className="nav-icon">{item.icon}</span>
               <span className="nav-label">{item.label}</span>
@@ -58,6 +123,19 @@ function App() {
       <main className="main-content">
         <header className="topbar">
           <div className="topbar-left">
+            {/* 3 Horizontal Lines Hamburger button for Mobile */}
+            <button
+              type="button"
+              className={`hamburger-btn ${mobileMenuOpen ? 'open' : ''}`}
+              onClick={() => setMobileMenuOpen((prev) => !prev)}
+              aria-label="Toggle navigation menu"
+              aria-expanded={mobileMenuOpen}
+            >
+              <span className="hamburger-bar bar-1" />
+              <span className="hamburger-bar bar-2" />
+              <span className="hamburger-bar bar-3" />
+            </button>
+
             <div className="mobile-brand">
               <div className="brand-icon-sm">FYL</div>
               <span className="brand-name-sm">FLY</span>

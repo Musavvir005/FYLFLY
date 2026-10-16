@@ -1,6 +1,7 @@
 const cloudinary = require("../config/cloudinary");
 const transporter = require("../config/otp");
 const File = require("../models/File");
+const { fetchJoke, buildEmailHTML, buildEmailText } = require("../utils/emailTemplate");
 
 // ── Helper ───────────────────────────────────────────────
 
@@ -61,9 +62,9 @@ const uploadFile = async (req, res) => {
       resource_type: "auto",
     });
 
-    // 2️⃣ Generate access code + 3-hour expiry
+    // 2️⃣ Generate access code + 24-hour expiry
     const code = generateCode();
-    const expiryTime = new Date(Date.now() + 3 * 60 * 60 * 1000);
+    const expiryTime = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
     // 3️⃣ Save file record to MongoDB
     const newFile = await File.create({
@@ -77,40 +78,51 @@ const uploadFile = async (req, res) => {
       expiryTime,
     });
 
-    // 4️⃣ Send access code to recipient's email in the background (non-blocking)
+    // 4️⃣ Send OTP to recipient's email in the background (non-blocking)
     const senderMessage = req.body.message ? req.body.message.trim() : "";
     const senderFrom = process.env.EMAIL_USER
-      ? `"FYLFLY" <${process.env.EMAIL_USER.trim()}>`
+      ? `"FYL-FLY" <${process.env.EMAIL_USER.trim()}>`
       : undefined;
 
-    transporter.sendMail({
-      from: senderFrom,
-      to: req.body.email,
-      subject: "Your File Access Code — FYLFLY",
-      text: `Your file access code is: FYL-${code}\n\n${senderMessage ? `Your friend's message:\n"${senderMessage}"\n\n` : ""}Enter this code on the Retrieve page to download your file.\nThe code is valid for 3 hours (until ${expiryTime.toLocaleTimeString()}).`,
-      html: `
-        <p>Greetings..,</p>
-        <p>A file has been shared by your friend with you, via <strong>FYLFLY</strong>.</p>
-        ${senderMessage ? `
-        <div style="margin: 16px 0; padding: 12px 16px; border-left: 4px solid #6c63ff; background: #f5f4ff; border-radius: 4px;">
-          <p style="margin: 0; font-style: italic; color: #444;">“${senderMessage}”</p>
-        </div>` : ""}
-        <p>Your access code is:</p>
-        <h2 style="letter-spacing: 8px; font-size: 32px; color: #4a4af4;">FYL-${code}</h2>
-        <p>Enter this code on the <strong>Retrieve</strong> page to download your file.</p>
-        <p><em>Valid until <strong>${expiryTime.toLocaleTimeString()}</strong> (3 hours).</em></p>
-      `,
-    }).then(() => {
-      console.log(`✉  Access code email sent successfully to ${req.body.email}`);
-    }).catch((mailErr) => {
-      console.error("  Mailer failed to send access code:", mailErr.message);
-      console.log(`💡  Generated code for fallback retrieval: FYL-${code}`);
-    });
+    // Fetch a joke & build the beautiful spam-safe email (async, non-blocking)
+    (async () => {
+      try {
+        const joke = await fetchJoke();
+        const html = buildEmailHTML({
+          code,
+          expiryTime,
+          senderMessage,
+          joke,
+          fileName: req.file.originalname,
+        });
+        const text = buildEmailText({
+          code,
+          expiryTime,
+          senderMessage,
+          joke,
+          fileName: req.file.originalname,
+        });
+
+        await transporter.sendMail({
+          from: senderFrom,
+          to: req.body.email,
+          replyTo: process.env.EMAIL_USER ? process.env.EMAIL_USER.trim() : undefined,
+          subject: "Your friend shared a file with you via FYLFLY",
+          text,
+          html,
+        });
+
+        console.log(`✉  OTP email sent successfully to ${req.body.email}`);
+      } catch (mailErr) {
+        console.error("  Mailer failed to send OTP:", mailErr.message);
+        console.log(`💡  Generated OTP for fallback retrieval: FYL-${code}`);
+      }
+    })();
 
     // 5️⃣ Return code + expiry to frontend immediately
     res.status(201).json({
       success: true,
-      message: "File uploaded & access code sent",
+      message: "File uploaded & OTP sent",
       code: newFile.code,
       expiryTime: newFile.expiryTime,
     });
@@ -121,13 +133,13 @@ const uploadFile = async (req, res) => {
   }
 };
 
-// POST /api/retrieve — Retrieve file using the access code
+// POST /api/retrieve — Retrieve file using the OTP
 const retrieveFile = async (req, res) => {
   try {
     const { code } = req.body;
 
     if (!code || !code.trim()) {
-      return res.status(400).json({ success: false, message: "Access code is required" });
+      return res.status(400).json({ success: false, message: "OTP is required" });
     }
 
     // Strip "FYL", hyphens, spaces if user passed it (e.g. FYL-1234AB, fyl-1234ab, FYL 1234AB)

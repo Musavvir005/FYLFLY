@@ -8,9 +8,9 @@ const fileSchema = new mongoose.Schema({
   type: String,
 
   email: String,                // recipient email — used to send the access code
-  code: String,                 // 6-digit reusable access code (valid 3 hrs)
+  code: String,                 // 6-digit reusable access code (valid 24 hrs)
 
-  expiryTime: Date,             // uploadedAt + 3 hours — file is purged after this
+  expiryTime: Date,             // uploadedAt + 24 hours — file is purged after this
 
   uploadedAt: {
     type: Date,

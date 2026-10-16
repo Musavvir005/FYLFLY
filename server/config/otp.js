@@ -23,7 +23,7 @@ const createGmailTransporter = (port = 465, secure = true) => {
  * 3. Gmail SMTP (Ports 465 / 587 — for local dev or paid hosting)
  * 4. Ethereal Email (mock test fallback for dev)
  */
-const sendMail = async ({ from, to, subject, text, html }) => {
+const sendMail = async ({ from, to, replyTo, subject, text, html }) => {
   const emailUser = (process.env.EMAIL_USER || "").trim();
   const brevoKey = (process.env.BREVO_API_KEY || "").trim();
   const resendKey = (process.env.RESEND_API_KEY || "").trim();
@@ -40,8 +40,9 @@ const sendMail = async ({ from, to, subject, text, html }) => {
           "content-type": "application/json",
         },
         body: JSON.stringify({
-          sender: { name: "FYLFLY", email: senderEmail },
+          sender: { name: "FYL-FLY", email: senderEmail },
           to: [{ email: to }],
+          replyTo: replyTo ? { email: replyTo, name: "FYL-FLY" } : undefined,
           subject,
           textContent: text,
           htmlContent: html,
@@ -99,7 +100,7 @@ const sendMail = async ({ from, to, subject, text, html }) => {
   // 3️⃣ Priority 3: Gmail SMTP (Ports 465 / 587)
   const emailPass = (process.env.EMAIL_PASS || "").replace(/\s+/g, "");
   if (emailUser && emailPass) {
-    const sender = from || `"FYLFLY" <${emailUser}>`;
+    const sender = from || `"FYL-FLY" <${emailUser}>`;
 
     // Attempt 1: Port 465 (SSL)
     try {
@@ -107,6 +108,7 @@ const sendMail = async ({ from, to, subject, text, html }) => {
       const info = await transporter465.sendMail({
         from: sender,
         to,
+        replyTo,
         subject,
         text,
         html,
@@ -122,6 +124,7 @@ const sendMail = async ({ from, to, subject, text, html }) => {
         const info = await transporter587.sendMail({
           from: sender,
           to,
+          replyTo,
           subject,
           text,
           html,
@@ -175,4 +178,4 @@ const sendMail = async ({ from, to, subject, text, html }) => {
 
 module.exports = {
   sendMail,
-};
+};

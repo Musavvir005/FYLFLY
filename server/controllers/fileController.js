@@ -91,9 +91,12 @@ const uploadFile = async (req, res) => {
 
     // 4️⃣ Send access code to recipient's email in the background (non-blocking)
     const senderMessage = req.body.message ? req.body.message.trim() : "";
+    const senderFrom = process.env.EMAIL_USER
+      ? `"FYLFLY" <${process.env.EMAIL_USER.trim()}>`
+      : undefined;
 
     transporter.sendMail({
-      from: `"FYLFLY" <${process.env.EMAIL_USER}>`,
+      from: senderFrom,
       to: req.body.email,
       subject: "Your File Access Code — FYLFLY",
       text: `Your file access code is: FYL-${code}\n\n${senderMessage ? `Your friend's message:\n"${senderMessage}"\n\n` : ""}Enter this code on the Retrieve page to download your file.\nThe code is valid for 3 hours (until ${expiryTime.toLocaleTimeString()}).`,
@@ -182,10 +185,71 @@ const deleteFile = async (req, res) => {
   }
 };
 
+// GET /api/email-diag — Verify email configuration and SMTP connection
+const emailDiagnostics = async (req, res) => {
+  const nodemailer = require("nodemailer");
+  const emailUser = process.env.EMAIL_USER ? process.env.EMAIL_USER.trim() : null;
+  const rawPass = process.env.EMAIL_PASS || null;
+  const cleanedPass = rawPass ? rawPass.replace(/\s+/g, "") : null;
+
+  const result = {
+    envEmailUserPresent: !!emailUser,
+    envEmailUserMasked: emailUser ? emailUser.replace(/(?<=.).(?=[^@]*?@)/g, '*') : null,
+    envEmailPassPresent: !!rawPass,
+    envEmailPassLength: cleanedPass ? cleanedPass.length : 0,
+    hasSpacesInRawPass: rawPass ? /\s/.test(rawPass) : false,
+    environment: process.env.NODE_ENV || 'development',
+  };
+
+  if (!emailUser || !cleanedPass) {
+    result.status = "error";
+    result.message = "EMAIL_USER or EMAIL_PASS is MISSING in this environment! Please configure them in Render Dashboard -> Environment.";
+    return res.status(200).json(result);
+  }
+
+  try {
+    const testTransporter = nodemailer.createTransport({
+      host: "smtp.gmail.com",
+      port: 465,
+      secure: true,
+      auth: {
+        user: emailUser,
+        pass: cleanedPass,
+      },
+      tls: {
+        rejectUnauthorized: false,
+      },
+    });
+
+    await testTransporter.verify();
+    result.status = "ok";
+    result.message = "Gmail SMTP connection and credentials verified successfully!";
+
+    if (req.query.sendTo) {
+      const info = await testTransporter.sendMail({
+        from: `"FYLFLY Diagnostic" <${emailUser}>`,
+        to: req.query.sendTo,
+        subject: "FYLFLY Email Diagnostic Test",
+        text: "If you received this message, Gmail SMTP is working properly from your deployed backend!",
+      });
+      result.testEmailSent = true;
+      result.messageId = info.messageId;
+    }
+
+    return res.status(200).json(result);
+  } catch (err) {
+    result.status = "smtp_error";
+    result.message = `Gmail SMTP verification failed: ${err.message}`;
+    result.code = err.code;
+    return res.status(200).json(result);
+  }
+};
+
 module.exports = {
   getAllFiles,
   getFileById,
   uploadFile,
   retrieveFile,
   deleteFile,
+  emailDiagnostics,
 };

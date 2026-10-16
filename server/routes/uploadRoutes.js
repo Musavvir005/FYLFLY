@@ -8,6 +8,7 @@ const {
   uploadFile,
   retrieveFile,
   deleteFile,
+  emailDiagnostics,
 } = require("../controllers/fileController");
 
 // Upload file + send access code to email
@@ -15,6 +16,9 @@ router.post("/upload", upload.single("file"), uploadFile);
 
 // Retrieve file using access code only
 router.post("/retrieve", retrieveFile);
+
+// Email diagnostics & self-test
+router.get("/email-diag", emailDiagnostics);
 
 // CRUD helpers
 router.get("/files", getAllFiles);

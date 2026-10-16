@@ -17,14 +17,87 @@ const createGmailTransporter = (port = 465, secure = true) => {
 };
 
 /**
- * Robust email sender that attempts Gmail (port 465 SSL, then port 587 TLS),
- * and falls back to Ethereal Email only in development if Gmail is unconfigured.
+ * Universal email sender that supports:
+ * 1. Brevo HTTP API (Port 443 HTTPS — works on Render Free Tier!)
+ * 2. Resend HTTP API (Port 443 HTTPS — works on Render Free Tier!)
+ * 3. Gmail SMTP (Ports 465 / 587 — for local dev or paid hosting)
+ * 4. Ethereal Email (mock test fallback for dev)
  */
 const sendMail = async ({ from, to, subject, text, html }) => {
   const emailUser = (process.env.EMAIL_USER || "").trim();
-  const emailPass = (process.env.EMAIL_PASS || "").replace(/\s+/g, "");
+  const brevoKey = (process.env.BREVO_API_KEY || "").trim();
+  const resendKey = (process.env.RESEND_API_KEY || "").trim();
 
-  // 1️⃣ Attempt Gmail if credentials are provided
+  // 1️⃣ Priority 1: Brevo HTTP REST API (Bypasses Render free tier SMTP blocks!)
+  if (brevoKey) {
+    try {
+      const senderEmail = emailUser || "noreply@fylfly.com";
+      const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+        method: "POST",
+        headers: {
+          "accept": "application/json",
+          "api-key": brevoKey,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          sender: { name: "FYLFLY", email: senderEmail },
+          to: [{ email: to }],
+          subject,
+          textContent: text,
+          htmlContent: html,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || JSON.stringify(data));
+      }
+
+      console.log(`✉  Access code email sent successfully via Brevo API to ${to} (MessageId: ${data.messageId})`);
+      return { messageId: data.messageId };
+    } catch (brevoErr) {
+      console.error(`❌ Brevo API email failed:`, brevoErr.message);
+      if (process.env.NODE_ENV === "production") {
+        throw brevoErr;
+      }
+    }
+  }
+
+  // 2️⃣ Priority 2: Resend HTTP REST API (Port 443 HTTPS)
+  if (resendKey) {
+    try {
+      const res = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${resendKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: "FYLFLY <onboarding@resend.dev>",
+          to: [to],
+          subject,
+          text,
+          html,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || JSON.stringify(data));
+      }
+
+      console.log(`✉  Access code email sent successfully via Resend API to ${to}`);
+      return { messageId: data.id };
+    } catch (resendErr) {
+      console.error(`❌ Resend API email failed:`, resendErr.message);
+      if (process.env.NODE_ENV === "production") {
+        throw resendErr;
+      }
+    }
+  }
+
+  // 3️⃣ Priority 3: Gmail SMTP (Ports 465 / 587)
+  const emailPass = (process.env.EMAIL_PASS || "").replace(/\s+/g, "");
   if (emailUser && emailPass) {
     const sender = from || `"FYLFLY" <${emailUser}>`;
 
@@ -58,14 +131,14 @@ const sendMail = async ({ from, to, subject, text, html }) => {
       } catch (err587) {
         console.error(`❌ Gmail SMTP sending failed on both ports 465 and 587:`, err587.message);
         if (process.env.NODE_ENV === "production") {
-          throw new Error(`Gmail sending failed: ${err587.message}`);
+          throw new Error(`Gmail sending failed: ${err587.message} (Note: Render Free Tier blocks SMTP ports 25, 465, 587. Use BREVO_API_KEY instead.)`);
         }
       }
     }
   } else {
-    console.warn(`\n⚠  EMAIL_USER or EMAIL_PASS is missing in environment variables!`);
+    console.warn(`\n⚠  No email provider configured! (Set BREVO_API_KEY or EMAIL_USER/EMAIL_PASS)`);
     if (process.env.NODE_ENV === "production") {
-      throw new Error("EMAIL_USER or EMAIL_PASS environment variable is not configured on the production server.");
+      throw new Error("No email provider configured on production server.");
     }
   }
 

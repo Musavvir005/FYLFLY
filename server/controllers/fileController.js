@@ -191,19 +191,55 @@ const emailDiagnostics = async (req, res) => {
   const emailUser = process.env.EMAIL_USER ? process.env.EMAIL_USER.trim() : null;
   const rawPass = process.env.EMAIL_PASS || null;
   const cleanedPass = rawPass ? rawPass.replace(/\s+/g, "") : null;
+  const brevoKey = process.env.BREVO_API_KEY ? process.env.BREVO_API_KEY.trim() : null;
+  const resendKey = process.env.RESEND_API_KEY ? process.env.RESEND_API_KEY.trim() : null;
 
   const result = {
+    brevoConfigured: !!brevoKey,
+    resendConfigured: !!resendKey,
     envEmailUserPresent: !!emailUser,
     envEmailUserMasked: emailUser ? emailUser.replace(/(?<=.).(?=[^@]*?@)/g, '*') : null,
     envEmailPassPresent: !!rawPass,
     envEmailPassLength: cleanedPass ? cleanedPass.length : 0,
     hasSpacesInRawPass: rawPass ? /\s/.test(rawPass) : false,
     environment: process.env.NODE_ENV || 'development',
+    renderSmtpNote: "Render Free Tier blocks outbound SMTP ports 25, 465, and 587. If using Render Free, configure BREVO_API_KEY for guaranteed email delivery over Port 443.",
   };
+
+  // If Brevo is configured, test Brevo
+  if (brevoKey) {
+    result.activeProvider = "Brevo HTTP API (Port 443 HTTPS)";
+    if (req.query.sendTo) {
+      try {
+        const sendRes = await fetch("https://api.brevo.com/v3/smtp/email", {
+          method: "POST",
+          headers: {
+            "accept": "application/json",
+            "api-key": brevoKey,
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            sender: { name: "FYLFLY Diagnostic", email: emailUser || "noreply@fylfly.com" },
+            to: [{ email: req.query.sendTo }],
+            subject: "FYLFLY Brevo Diagnostic Test",
+            textContent: "If you received this message, Brevo HTTP API is working on Render!",
+          }),
+        });
+        const sendData = await sendRes.json();
+        result.testEmailSent = sendRes.ok;
+        result.brevoResponse = sendData;
+      } catch (err) {
+        result.testEmailSent = false;
+        result.brevoError = err.message;
+      }
+    }
+    result.status = "ok";
+    return res.status(200).json(result);
+  }
 
   if (!emailUser || !cleanedPass) {
     result.status = "error";
-    result.message = "EMAIL_USER or EMAIL_PASS is MISSING in this environment! Please configure them in Render Dashboard -> Environment.";
+    result.message = "No email provider configured. Please add BREVO_API_KEY (recommended for Render Free) or EMAIL_USER & EMAIL_PASS in Render Dashboard -> Environment.";
     return res.status(200).json(result);
   }
 

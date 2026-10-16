@@ -111,9 +111,24 @@ function RetrievePanel() {
             type="text"
             placeholder="12S45W"
             value={code}
-            onChange={(e) => setCode(e.target.value.replace(/[^A-Za-z0-9]/g, '').slice(0, 6))}
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck="false"
+            onChange={(e) => {
+              const raw = e.target.value;
+              const stripped = raw.replace(/^FYL[-_\s]*/i, '');
+              const cleaned = stripped.replace(/[^A-Za-z0-9]/g, '').slice(0, 6);
+              setCode(cleaned);
+            }}
+            onPaste={(e) => {
+              e.preventDefault();
+              const pasted = e.clipboardData.getData('text');
+              const stripped = pasted.replace(/^FYL[-_\s]*/i, '');
+              const cleaned = stripped.replace(/[^A-Za-z0-9]/g, '').slice(0, 6);
+              setCode(cleaned);
+            }}
             onKeyDown={(e) => e.key === 'Enter' && handleRetrieve()}
-            maxLength={6}
+            maxLength={12}
           />
         </div>
         <button

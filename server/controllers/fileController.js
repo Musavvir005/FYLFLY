@@ -142,10 +142,14 @@ const retrieveFile = async (req, res) => {
       return res.status(400).json({ success: false, message: "Access code is required" });
     }
 
-    // Strip "FYL-" prefix if user pastes the full branded code
-    const cleanCode = code.trim().replace(/^FYL-/i, "");
+    // Strip "FYL", hyphens, spaces if user passed it (e.g. FYL-1234AB, fyl-1234ab, FYL 1234AB)
+    const cleanCode = code.trim().replace(/^FYL[-_\s]*/i, "");
 
-    const file = await File.findOne({ code: cleanCode });
+    // Case-insensitive exact match
+    const escapedCode = cleanCode.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const file = await File.findOne({
+      code: { $regex: new RegExp(`^${escapedCode}$`, "i") },
+    });
 
     if (!file) {
       return res.status(404).json({ success: false, message: "Invalid code — no file found" });
@@ -160,6 +164,8 @@ const retrieveFile = async (req, res) => {
       fileName: file.fileName,
       fileUrl: file.fileUrl,
       expiryTime: file.expiryTime,
+      size: file.size,
+      type: file.type,
     });
 
   } catch (err) {

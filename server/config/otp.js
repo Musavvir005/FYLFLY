@@ -62,6 +62,10 @@ const sendMail = async ({ from, to, replyTo, subject, text, html, priority = "hi
 
   // 1️⃣ Priority 1: Brevo HTTP REST API (Bypasses Render free tier SMTP blocks!)
   if (brevoKey) {
+    if (brevoKey.startsWith("xsmtpsib-")) {
+      console.warn("⚠ Notice: BREVO_API_KEY has an 'xsmtpsib-' prefix (SMTP key from the 'SMTP' tab). Brevo REST API requires the key from the 'API Keys' tab (starts with 'xkeysib-').");
+    }
+
     try {
       const senderEmail = emailUser || "noreply@fylfly.com";
       const controller = new AbortController();
@@ -96,6 +100,9 @@ const sendMail = async ({ from, to, replyTo, subject, text, html, priority = "hi
     } catch (brevoErr) {
       console.error(`❌ Brevo API email failed:`, brevoErr.message);
       if (process.env.NODE_ENV === "production") {
+        if (brevoKey.startsWith("xsmtpsib-")) {
+          throw new Error("BREVO_API_KEY is an SMTP key ('xsmtpsib-...'). In Brevo dashboard, go to 'SMTP & API' -> click the 'API Keys' tab -> click 'Generate a new API key' and use the key starting with 'xkeysib-...'.");
+        }
         throw brevoErr;
       }
     }

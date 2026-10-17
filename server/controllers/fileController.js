@@ -244,6 +244,36 @@ const emailDiagnostics = async (req, res) => {
     return res.status(200).json(result);
   }
 
+  // If Resend is configured, test Resend
+  if (resendKey) {
+    result.activeProvider = "Resend HTTP API (Port 443 HTTPS)";
+    if (req.query.sendTo) {
+      try {
+        const sendRes = await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${resendKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            from: "FYLFLY <onboarding@resend.dev>",
+            to: [req.query.sendTo],
+            subject: "FYLFLY Resend Diagnostic Test",
+            text: "If you received this message, Resend HTTP API is working on Render!",
+          }),
+        });
+        const sendData = await sendRes.json();
+        result.testEmailSent = sendRes.ok;
+        result.resendResponse = sendData;
+      } catch (err) {
+        result.testEmailSent = false;
+        result.resendError = err.message;
+      }
+    }
+    result.status = "ok";
+    return res.status(200).json(result);
+  }
+
   if (!emailUser || !cleanedPass) {
     result.status = "error";
     result.message = "No email provider configured. Please add BREVO_API_KEY (recommended for Render Free) or EMAIL_USER & EMAIL_PASS in Render Dashboard -> Environment.";

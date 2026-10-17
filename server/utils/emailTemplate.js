@@ -167,12 +167,15 @@ function buildEmailHTML({ code, expiryTime, senderMessage, joke, fileName }) {
                   </td>
                 </tr>
                 <tr>
-                  <td style="padding:4px 40px 28px;text-align:center;">
+                  <td style="padding:4px 40px 20px;text-align:center;">
                     <p style="margin:0;font-family:'Segoe UI',Arial,sans-serif;font-size:12px;color:#9ca3af;">
                       ${expiryLine}
                     </p>
                   </td>
                 </tr>
+
+                <!-- JOKE (Prominent, right below Access Code) -->
+                ${jokeSection}
 
                 <!-- CTA Button -->
                 <tr>
@@ -217,12 +220,10 @@ function buildEmailHTML({ code, expiryTime, senderMessage, joke, fileName }) {
                   </td>
                 </tr>
 
-                <!-- Joke -->
-                ${jokeSection}
-
               </table>
             </td>
           </tr>
+
 
           <!-- FOOTER -->
           <tr>
@@ -273,17 +274,19 @@ function buildEmailText({ code, expiryTime, senderMessage, joke, fileName }) {
 
   text += `Your Access Code: FYL-${code}\n`;
   text += `Valid until: ${expiryStr} (24 hours)\n\n`;
+
+  if (joke) {
+    text += `😄 Meanwhile, have this laugh while you wait..\n`;
+    text += `${joke.setup}\n`;
+    text += `— ${joke.punchline}\n\n`;
+  }
+
   text += `How to retrieve your file:\n`;
-  text += `1. Open FYLFLY using the button above\n`;
+  text += `1. Open FYLFLY: https://fyl-fly.vercel.app/\n`;
   text += `2. Click "Retrieve" in the navigation\n`;
   text += `3. Enter the code FYL-${code} and download\n\n`;
   text += `💡 Tip: If not received in your inbox, please check your spam box or junk folder.\n\n`;
 
-  if (joke) {
-    text += `Have this meanwhile you wait.. 😄\n`;
-    text += `${joke.setup}\n`;
-    text += `— ${joke.punchline}\n\n`;
-  }
 
   text += `---\nSent by FYLFLY — Secure, Fast, Private file sharing\n`;
   text += `This is an automated notification. You received this because your friend shared a file with you.\n`;

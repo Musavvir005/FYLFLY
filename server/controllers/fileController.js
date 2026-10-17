@@ -85,10 +85,11 @@ const uploadFile = async (req, res) => {
       ? `"FYL-FLY" <${process.env.EMAIL_USER.trim()}>`
       : undefined;
 
-    // Fetch a joke & build the beautiful spam-safe email (async, non-blocking)
+    // Fetch a joke & build the beautiful spam-safe email
+    const joke = await fetchJoke();
+
     (async () => {
       try {
-        const joke = await fetchJoke();
         const html = buildEmailHTML({
           code,
           expiryTime,
@@ -120,13 +121,16 @@ const uploadFile = async (req, res) => {
       }
     })();
 
-    // 5️⃣ Return code + expiry to frontend immediately
+    // 5️⃣ Return code + expiry + joke to frontend immediately
     res.status(201).json({
       success: true,
       message: "File uploaded & OTP sent",
       code: newFile.code,
       expiryTime: newFile.expiryTime,
+      fileName: req.file.originalname,
+      joke,
     });
+
 
   } catch (err) {
     console.error("Upload Error:", err);

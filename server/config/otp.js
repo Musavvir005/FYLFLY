@@ -99,12 +99,7 @@ const sendMail = async ({ from, to, replyTo, subject, text, html, priority = "hi
       return { messageId: data.messageId };
     } catch (brevoErr) {
       console.error(`❌ Brevo API email failed:`, brevoErr.message);
-      if (process.env.NODE_ENV === "production") {
-        if (brevoKey.startsWith("xsmtpsib-")) {
-          throw new Error("BREVO_API_KEY is an SMTP key ('xsmtpsib-...'). In Brevo dashboard, go to 'SMTP & API' -> click the 'API Keys' tab -> click 'Generate a new API key' and use the key starting with 'xkeysib-...'.");
-        }
-        throw brevoErr;
-      }
+      console.warn(`⚠ Falling back to next available email provider (Gmail SMTP)...`);
     }
   }
 
@@ -140,9 +135,7 @@ const sendMail = async ({ from, to, replyTo, subject, text, html, priority = "hi
       return { messageId: data.id };
     } catch (resendErr) {
       console.error(`❌ Resend API email failed:`, resendErr.message);
-      if (process.env.NODE_ENV === "production") {
-        throw resendErr;
-      }
+      console.warn(`⚠ Falling back to Gmail SMTP...`);
     }
   }
 

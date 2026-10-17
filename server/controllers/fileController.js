@@ -213,110 +213,63 @@ const emailDiagnostics = async (req, res) => {
     renderSmtpNote: "Render Free Tier blocks outbound SMTP ports 25, 465, and 587. If using Render Free, configure BREVO_API_KEY for guaranteed email delivery over Port 443.",
   };
 
-  // If Brevo is configured, test Brevo
-  if (brevoKey) {
-    result.activeProvider = "Brevo HTTP API (Port 443 HTTPS)";
-    if (req.query.sendTo) {
-      try {
-        const sendRes = await fetch("https://api.brevo.com/v3/smtp/email", {
-          method: "POST",
-          headers: {
-            "accept": "application/json",
-            "api-key": brevoKey,
-            "content-type": "application/json",
-          },
-          body: JSON.stringify({
-            sender: { name: "FYLFLY Diagnostic", email: emailUser || "noreply@fylfly.com" },
-            to: [{ email: req.query.sendTo }],
-            subject: "FYLFLY Brevo Diagnostic Test",
-            textContent: "If you received this message, Brevo HTTP API is working on Render!",
-          }),
-        });
-        const sendData = await sendRes.json();
-        result.testEmailSent = sendRes.ok;
-        result.brevoResponse = sendData;
-      } catch (err) {
-        result.testEmailSent = false;
-        result.brevoError = err.message;
-      }
-    }
-    result.status = "ok";
-    return res.status(200).json(result);
-  }
-
-  // If Resend is configured, test Resend
-  if (resendKey) {
-    result.activeProvider = "Resend HTTP API (Port 443 HTTPS)";
-    if (req.query.sendTo) {
-      try {
-        const sendRes = await fetch("https://api.resend.com/emails", {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${resendKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            from: "FYLFLY <onboarding@resend.dev>",
-            to: [req.query.sendTo],
-            subject: "FYLFLY Resend Diagnostic Test",
-            text: "If you received this message, Resend HTTP API is working on Render!",
-          }),
-        });
-        const sendData = await sendRes.json();
-        result.testEmailSent = sendRes.ok;
-        result.resendResponse = sendData;
-      } catch (err) {
-        result.testEmailSent = false;
-        result.resendError = err.message;
-      }
-    }
-    result.status = "ok";
-    return res.status(200).json(result);
-  }
-
-  if (!emailUser || !cleanedPass) {
-    result.status = "error";
-    result.message = "No email provider configured. Please add BREVO_API_KEY (recommended for Render Free) or EMAIL_USER & EMAIL_PASS in Render Dashboard -> Environment.";
-    return res.status(200).json(result);
-  }
-
-  try {
-    const testTransporter = nodemailer.createTransport({
-      host: "smtp.gmail.com",
-      port: 465,
-      secure: true,
-      auth: {
-        user: emailUser,
-        pass: cleanedPass,
-      },
-      tls: {
-        rejectUnauthorized: false,
-      },
-    });
-
-    await testTransporter.verify();
-    result.status = "ok";
-    result.message = "Gmail SMTP connection and credentials verified successfully!";
-
-    if (req.query.sendTo) {
-      const info = await testTransporter.sendMail({
-        from: `"FYLFLY Diagnostic" <${emailUser}>`,
+  // Diagnostic test via unified sendMail
+  if (req.query.sendTo) {
+    try {
+      const info = await transporter.sendMail({
         to: req.query.sendTo,
-        subject: "FYLFLY Email Diagnostic Test",
-        text: "If you received this message, Gmail SMTP is working properly from your deployed backend!",
+        subject: "FYLFLY Live Delivery Test",
+        text: "If you received this message, email delivery from your deployed backend is working!",
+        html: "<p>If you received this message, email delivery from your deployed backend is working!</p>",
       });
       result.testEmailSent = true;
-      result.messageId = info.messageId;
+      result.sendResult = info;
+    } catch (err) {
+      result.testEmailSent = false;
+      result.sendError = err.message;
+    }
+  }
+
+  // Also check direct Gmail SMTP connectivity on port 465 and 587
+  if (emailUser && cleanedPass) {
+    result.gmailSmtp = {};
+    try {
+      const t465 = nodemailer.createTransport({
+        host: "smtp.gmail.com",
+        port: 465,
+        secure: true,
+        auth: { user: emailUser, pass: cleanedPass },
+        tls: { rejectUnauthorized: false },
+        connectionTimeout: 4000,
+        greetingTimeout: 4000,
+      });
+      await t465.verify();
+      result.gmailSmtp.port465 = "connected_ok";
+    } catch (err465) {
+      result.gmailSmtp.port465 = `failed: ${err465.message}`;
     }
 
-    return res.status(200).json(result);
-  } catch (err) {
-    result.status = "smtp_error";
-    result.message = `Gmail SMTP verification failed: ${err.message}`;
-    result.code = err.code;
-    return res.status(200).json(result);
+    try {
+      const t587 = nodemailer.createTransport({
+        host: "smtp.gmail.com",
+        port: 587,
+        secure: false,
+        auth: { user: emailUser, pass: cleanedPass },
+        tls: { rejectUnauthorized: false },
+        connectionTimeout: 4000,
+        greetingTimeout: 4000,
+      });
+      await t587.verify();
+      result.gmailSmtp.port587 = "connected_ok";
+    } catch (err587) {
+      result.gmailSmtp.port587 = `failed: ${err587.message}`;
+    }
   }
+
+  result.status = result.testEmailSent ? "sent_ok" : "ready";
+  return res.status(200).json(result);
 };
+
 
 module.exports = {
   getAllFiles,

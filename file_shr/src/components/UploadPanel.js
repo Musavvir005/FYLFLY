@@ -28,7 +28,6 @@ function UploadPanel() {
   const [sentToEmail, setSentToEmail] = useState('');
   const [showToast, setShowToast] = useState(false);
   const [uploadResult, setUploadResult] = useState(null); // { code, expiryTime, recipient, fileName, joke }
-  const [copiedCode, setCopiedCode] = useState(false);
   const [jokeRevealed, setJokeRevealed] = useState(false);
   const [currentJoke, setCurrentJoke] = useState(null);
   const fileInputRef = useRef();
@@ -90,14 +89,6 @@ function UploadPanel() {
     setMessage('');
     setUploadResult(null);
     setJokeRevealed(false);
-    setCopiedCode(false);
-  };
-
-  const handleCopyCode = () => {
-    if (!uploadResult?.code) return;
-    navigator.clipboard.writeText(`FYL-${uploadResult.code}`);
-    setCopiedCode(true);
-    setTimeout(() => setCopiedCode(false), 2000);
   };
 
   const handleNextJoke = (e) => {
@@ -139,7 +130,6 @@ function UploadPanel() {
       });
       setCurrentJoke(initialJoke);
       setJokeRevealed(false);
-      setCopiedCode(false);
       setSentToEmail(recipient.trim());
       setExpiryTime(data.expiryTime);
       setShowToast(true);
@@ -180,20 +170,12 @@ function UploadPanel() {
           </div>
 
           <div className="success-code-card">
-            <span className="success-code-label">YOUR ACCESS CODE</span>
+            <span className="success-code-label">ACCESS CODE</span>
             <div className="success-code-row">
               <span className="success-code-text">FYL-{uploadResult.code}</span>
-              <button
-                type="button"
-                className={`success-copy-btn ${copiedCode ? 'copied' : ''}`}
-                onClick={handleCopyCode}
-                title="Copy code to clipboard"
-              >
-                {copiedCode ? '✓ Copied' : '📋 Copy Code'}
-              </button>
             </div>
             <p className="success-expiry-text">
-              ⏳ Valid for 24 hours · Enter on the <strong>Retrieve</strong> tab to download
+              ⏳ Valid for 24 hours · Sent to <strong>{uploadResult.recipient}</strong>
             </p>
           </div>
 

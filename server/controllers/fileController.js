@@ -203,6 +203,8 @@ const emailDiagnostics = async (req, res) => {
 
   const result = {
     brevoConfigured: !!brevoKey,
+    brevoKeyPrefix: brevoKey ? brevoKey.slice(0, 10) : null,
+    brevoKeyValidFormat: brevoKey ? brevoKey.startsWith("xkeysib-") : false,
     resendConfigured: !!resendKey,
     envEmailUserPresent: !!emailUser,
     envEmailUserMasked: emailUser ? emailUser.replace(/(?<=.).(?=[^@]*?@)/g, '*') : null,

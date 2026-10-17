@@ -67,7 +67,8 @@ const sendMail = async ({ from, to, replyTo, subject, text, html, priority = "hi
     }
 
     try {
-      const senderEmail = (process.env.BREVO_SENDER_EMAIL || emailUser || "noreply@fylfly.com").trim();
+      const senderEmail = (process.env.BREVO_SENDER_EMAIL || "abdulmusavvir3000@gmail.com").trim();
+      const replyEmail = replyTo || emailUser || undefined;
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 6000);
       const res = await fetch("https://api.brevo.com/v3/smtp/email", {
@@ -81,7 +82,7 @@ const sendMail = async ({ from, to, replyTo, subject, text, html, priority = "hi
         body: JSON.stringify({
           sender: { name: "FYL-FLY", email: senderEmail },
           to: [{ email: targetEmail }],
-          replyTo: replyTo ? { email: replyTo, name: "FYL-FLY" } : undefined,
+          replyTo: replyEmail ? { email: replyEmail, name: "FYL-FLY" } : undefined,
           subject,
           textContent: text,
           htmlContent: html,

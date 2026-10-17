@@ -165,17 +165,7 @@ function UploadPanel() {
             <div className="success-check-circle">✓</div>
             <h3 className="success-title">File Uploaded & OTP Sent!</h3>
             <p className="success-subtitle">
-              Access code emailed to <strong>{uploadResult.recipient}</strong>
-            </p>
-          </div>
-
-          <div className="success-code-card">
-            <span className="success-code-label">ACCESS CODE</span>
-            <div className="success-code-row">
-              <span className="success-code-text">FYL-{uploadResult.code}</span>
-            </div>
-            <p className="success-expiry-text">
-              ⏳ Valid for 24 hours · Sent to <strong>{uploadResult.recipient}</strong>
+              We've emailed the access code to <strong>{uploadResult.recipient}</strong> (valid for 24 hrs).
             </p>
           </div>
 

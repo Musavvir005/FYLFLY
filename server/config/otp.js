@@ -50,6 +50,7 @@ const sendMail = async ({ from, to, replyTo, subject, text, html, priority = "hi
   const brevoKey = (process.env.BREVO_API_KEY || "").trim();
   const resendKey = (process.env.RESEND_API_KEY || "").trim();
   const targetEmail = (to || "").trim().toLowerCase();
+  const senderDisplayName = (process.env.EMAIL_FROM_NAME || "FYLFLY").trim();
 
   // Unified headers indicating urgent transactional delivery to bypass mailbox batching
   const mergedHeaders = {
@@ -80,9 +81,9 @@ const sendMail = async ({ from, to, replyTo, subject, text, html, priority = "hi
           "content-type": "application/json",
         },
         body: JSON.stringify({
-          sender: { name: "FYL-FLY", email: senderEmail },
+          sender: { name: senderDisplayName, email: senderEmail },
           to: [{ email: targetEmail }],
-          replyTo: replyEmail ? { email: replyEmail, name: "FYL-FLY" } : undefined,
+          replyTo: replyEmail ? { email: replyEmail, name: senderDisplayName } : undefined,
           subject,
           textContent: text,
           htmlContent: html,

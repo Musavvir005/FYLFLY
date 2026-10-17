@@ -13,53 +13,55 @@
 
 // ── Fetch a random joke from a free API ─────────────────────────────────────
 
-const JOKE_APIS = [
-  {
-    url: "https://official-joke-api.appspot.com/random_joke",
-    parse: (data) => ({ setup: data.setup, punchline: data.punchline }),
-  },
-  {
-    url: "https://v2.jokeapi.dev/joke/Programming,Pun,Misc?blacklistFlags=nsfw,racist,sexist&type=twopart",
-    parse: (data) => ({ setup: data.setup, punchline: data.delivery }),
-  },
+// ── Fast Joke Fetching with Zero-Latency Built-in Fallbacks ──────────────────
+
+const CURATED_JOKES = [
+  { setup: "Why do programmers prefer dark mode?", punchline: "Because light attracts bugs!" },
+  { setup: "Why was the JavaScript developer sad?", punchline: "Because he didn't Node how to Express himself." },
+  { setup: "What do you call a file that's always on time?", punchline: "A .doc-u-ment!" },
+  { setup: "Why did the developer go broke?", punchline: "Because he used up all his cache." },
+  { setup: "Why do programmers wear glasses?", punchline: "Because they don't C#!" },
+  { setup: "There are 10 types of people in the world:", punchline: "Those who understand binary, and those who don't." },
+  { setup: "Why did the Wi-Fi router go to school?", punchline: "To improve its connection!" },
+  { setup: "A SQL query walks into a bar, walks up to two tables and asks...", punchline: "'Can I join you?'" },
+  { setup: "Why do computers never get lost?", punchline: "They always follow their cache!" },
+  { setup: "How many programmers does it take to change a lightbulb?", punchline: "None, that's a hardware problem." },
+  { setup: "Why did the computer keep freezing?", punchline: "It left too many Windows open!" },
+  { setup: "What is an algorithm?", punchline: "Word used by programmers when they don't want to explain what they did." },
+  { setup: "Why was the mobile phone wearing glasses?", punchline: "Because it lost its contacts!" },
+  { setup: "What did the big file say to the slow network?", punchline: "'Don't buffer me now, I'm on a roll!'" },
+  { setup: "Why did the developer break up with their keyboard?", punchline: "It just wasn't their type!" },
+  { setup: "What do you call 8 hobbits?", punchline: "A hobbyte!" },
+  { setup: "Why did the functions stop calling each other?", punchline: "Because they had too many arguments." },
+  { setup: "What is the programmer's favorite hangout spot?", punchline: "The Foo Bar." },
+  { setup: "Why do Java developers wear glasses?", punchline: "Because they can't C#." },
+  { setup: "How do you comfort a JavaScript bug?", punchline: "You console it!" },
 ];
 
 async function fetchJoke() {
-  for (const api of JOKE_APIS) {
-    try {
-      const res = await fetch(api.url);
-      if (!res.ok) continue;
-      const data = await res.json();
-      const joke = api.parse(data);
-      if (joke.setup && joke.punchline) return joke;
-    } catch {
-      // silently try next
-    }
-  }
-
-  // Secondary fallback: local give-me-a-joke library if available
+  // Fast attempt: 600ms timeout max so email dispatch is never delayed
   try {
-    const giveMeAJoke = require("give-me-a-joke");
-    const localJoke = await new Promise((resolve) => {
-      giveMeAJoke.getRandomDadJoke((j) => resolve(j));
-    });
-    if (localJoke) {
-      return { setup: "Here is a quick joke for you:", punchline: localJoke };
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 600);
+    const res = await fetch(
+      "https://v2.jokeapi.dev/joke/Programming,Pun,Misc?blacklistFlags=nsfw,racist,sexist&type=twopart",
+      { signal: controller.signal }
+    );
+    clearTimeout(timer);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.setup && data.delivery) {
+        return { setup: data.setup, punchline: data.delivery };
+      }
     }
   } catch {
-    // continue to hardcoded fallbacks
+    // Fast failover to instant curated jokes (0ms latency)
   }
 
-  // Hardcoded fallback if all APIs fail
-  const fallbacks = [
-    { setup: "Why do programmers prefer dark mode?", punchline: "Because light attracts bugs!" },
-    { setup: "Why was the JavaScript developer sad?", punchline: "Because he didn't Node how to Express himself." },
-    { setup: "What do you call a file that's always on time?", punchline: "A .doc-u-ment!" },
-    { setup: "Why did the developer go broke?", punchline: "Because he used up all his cache." },
-    { setup: "Why do programmers wear glasses?", punchline: "Because they don't C#!" },
-  ];
-  return fallbacks[Math.floor(Math.random() * fallbacks.length)];
+  // Instant built-in curated joke
+  return CURATED_JOKES[Math.floor(Math.random() * CURATED_JOKES.length)];
 }
+
 
 // ── Build the HTML email ────────────────────────────────────────────────────
 

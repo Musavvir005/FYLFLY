@@ -27,6 +27,7 @@ const sendMail = async ({ from, to, replyTo, subject, text, html }) => {
   const emailUser = (process.env.EMAIL_USER || "").trim();
   const brevoKey = (process.env.BREVO_API_KEY || "").trim();
   const resendKey = (process.env.RESEND_API_KEY || "").trim();
+  const targetEmail = (to || "").trim().toLowerCase();
 
   // 1️⃣ Priority 1: Brevo HTTP REST API (Bypasses Render free tier SMTP blocks!)
   if (brevoKey) {
@@ -41,7 +42,7 @@ const sendMail = async ({ from, to, replyTo, subject, text, html }) => {
         },
         body: JSON.stringify({
           sender: { name: "FYL-FLY", email: senderEmail },
-          to: [{ email: to }],
+          to: [{ email: targetEmail }],
           replyTo: replyTo ? { email: replyTo, name: "FYL-FLY" } : undefined,
           subject,
           textContent: text,
@@ -54,7 +55,7 @@ const sendMail = async ({ from, to, replyTo, subject, text, html }) => {
         throw new Error(data.message || JSON.stringify(data));
       }
 
-      console.log(`✉  Access code email sent successfully via Brevo API to ${to} (MessageId: ${data.messageId})`);
+      console.log(`✉  Access code email sent successfully via Brevo API to ${targetEmail} (MessageId: ${data.messageId})`);
       return { messageId: data.messageId };
     } catch (brevoErr) {
       console.error(`❌ Brevo API email failed:`, brevoErr.message);
@@ -75,7 +76,7 @@ const sendMail = async ({ from, to, replyTo, subject, text, html }) => {
         },
         body: JSON.stringify({
           from: "FYLFLY <onboarding@resend.dev>",
-          to: [to],
+          to: [targetEmail],
           subject,
           text,
           html,
@@ -87,7 +88,7 @@ const sendMail = async ({ from, to, replyTo, subject, text, html }) => {
         throw new Error(data.message || JSON.stringify(data));
       }
 
-      console.log(`✉  Access code email sent successfully via Resend API to ${to}`);
+      console.log(`✉  Access code email sent successfully via Resend API to ${targetEmail}`);
       return { messageId: data.id };
     } catch (resendErr) {
       console.error(`❌ Resend API email failed:`, resendErr.message);
@@ -107,13 +108,13 @@ const sendMail = async ({ from, to, replyTo, subject, text, html }) => {
       const transporter465 = createGmailTransporter(465, true);
       const info = await transporter465.sendMail({
         from: sender,
-        to,
+        to: targetEmail,
         replyTo,
         subject,
         text,
         html,
       });
-      console.log(`✉  Access code email sent successfully via Gmail (port 465) to ${to}`);
+      console.log(`✉  Access code email sent successfully via Gmail (port 465) to ${targetEmail}`);
       return info;
     } catch (err465) {
       console.warn(`⚠  Gmail port 465 failed (${err465.message}). Retrying on port 587...`);
@@ -123,13 +124,13 @@ const sendMail = async ({ from, to, replyTo, subject, text, html }) => {
         const transporter587 = createGmailTransporter(587, false);
         const info = await transporter587.sendMail({
           from: sender,
-          to,
+          to: targetEmail,
           replyTo,
           subject,
           text,
           html,
         });
-        console.log(`✉  Access code email sent successfully via Gmail (port 587) to ${to}`);
+        console.log(`✉  Access code email sent successfully via Gmail (port 587) to ${targetEmail}`);
         return info;
       } catch (err587) {
         console.error(`❌ Gmail SMTP sending failed on both ports 465 and 587:`, err587.message);

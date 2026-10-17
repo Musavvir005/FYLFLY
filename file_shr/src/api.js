@@ -1,23 +1,32 @@
 // Central API configuration
-// Automatically connects to localhost:5000 in development, and your live Render backend in production
+// Automatically connects to:
+// 1. Render backend when hosted on Vercel or production domain
+// 2. Local IP (e.g. 192.168.x.x:5000) when testing from mobile on same Wi-Fi
+// 3. localhost:5000 when developing locally on laptop
 export const API_BASE_URL = (() => {
-  // If running in browser on a deployed host (e.g. *.vercel.app or production domain)
-  if (
-    typeof window !== 'undefined' &&
-    window.location.hostname !== 'localhost' &&
-    window.location.hostname !== '127.0.0.1' &&
-    !window.location.hostname.startsWith('192.168.') &&
-    !window.location.hostname.startsWith('10.')
-  ) {
-    const envUrl = process.env.REACT_APP_API_URL;
-    // Only use envUrl if it is a real remote URL, not a local address
-    if (envUrl && !envUrl.includes('localhost') && !envUrl.includes('192.168.')) {
-      return envUrl.replace(/\/+$/, '');
+  if (typeof window !== 'undefined') {
+    const { hostname } = window.location;
+
+    // Local LAN Wi-Fi testing from mobile devices
+    if (
+      hostname.startsWith('192.168.') ||
+      hostname.startsWith('10.') ||
+      /^172\.(1[6-9]|2\d|3[01])\./.test(hostname)
+    ) {
+      return `http://${hostname}:5000`;
     }
-    return 'https://fylfly.onrender.com';
+
+    // Deployed production environment (e.g. *.vercel.app)
+    if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
+      const envUrl = process.env.REACT_APP_API_URL;
+      if (envUrl && !envUrl.includes('localhost') && !envUrl.includes('192.168.')) {
+        return envUrl.replace(/\/+$/, '');
+      }
+      return 'https://fylfly.onrender.com';
+    }
   }
 
-  // Local development / testing
+  // Local development fallback
   return (
     process.env.REACT_APP_API_URL ||
     (process.env.NODE_ENV === 'production'

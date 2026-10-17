@@ -53,7 +53,8 @@ const uploadFile = async (req, res) => {
     if (!req.file) {
       return res.status(400).json({ success: false, message: "No file uploaded" });
     }
-    if (!req.body.email) {
+    const recipientEmail = (req.body.email || "").trim().toLowerCase();
+    if (!recipientEmail) {
       return res.status(400).json({ success: false, message: "Email is required" });
     }
 
@@ -73,7 +74,7 @@ const uploadFile = async (req, res) => {
       cloudinaryPublicId: result.public_id,
       size: req.file.size,
       type: req.file.mimetype,
-      email: req.body.email,
+      email: recipientEmail,
       code,
       expiryTime,
     });
@@ -105,14 +106,14 @@ const uploadFile = async (req, res) => {
 
         await transporter.sendMail({
           from: senderFrom,
-          to: req.body.email,
+          to: recipientEmail,
           replyTo: process.env.EMAIL_USER ? process.env.EMAIL_USER.trim() : undefined,
           subject: "Your friend shared a file with you via FYLFLY",
           text,
           html,
         });
 
-        console.log(`✉  OTP email sent successfully to ${req.body.email}`);
+        console.log(`✉  OTP email sent successfully to ${recipientEmail}`);
       } catch (mailErr) {
         console.error("  Mailer failed to send OTP:", mailErr.message);
         console.log(`💡  Generated OTP for fallback retrieval: FYL-${code}`);
